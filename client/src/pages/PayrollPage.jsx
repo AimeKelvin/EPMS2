@@ -18,7 +18,7 @@ export default function PayrollPage() {
 
   return (
     <div>
-      <h1>Payroll</h1>
+      <h1>Payroll Report</h1>
 
       {message && <div className="message">{message}</div>}
 
@@ -26,19 +26,22 @@ export default function PayrollPage() {
         <table>
           <thead>
             <tr>
-              <th>Department Code</th>
-              <th>Department Name</th>
-              <th>Gross Salary</th>
-              <th>Total Deduction</th>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Position</th>
+              <th>Department</th>
+              <th>Net Salary</th>
             </tr>
           </thead>
+
           <tbody>
-            {payroll.map((item) => (
-              <tr key={item.DepartmentCode}>
-                <td>{item.DepartmentCode}</td>
+            {payroll.map((item, index) => (
+              <tr key={index}>
+                <td>{item.FirstName}</td>
+                <td>{item.LastName}</td>
+                <td>{item.Position}</td>
                 <td>{item.DepartmentName}</td>
-                <td>{money(item.GrossSalary)}</td>
-                <td>{money(item.TotalDeduction)}</td>
+                <td>{money(item.NetSalary)}</td>
               </tr>
             ))}
           </tbody>
