@@ -3,22 +3,22 @@ import db from "../config/db.js";
 const getPayroll = (req, res) => {
   const sql = `
     SELECT
-      e.DepartmentCode,
+      d.DepartmentCode,
       d.DepartmentName,
       s.GrossSalary,
-      s.TotalDeduction
-    FROM Employee e
-    JOIN Department d
-      ON e.DepartmentCode = d.DepartmentCode
+      s.TotalDeduction,
+      (s.GrossSalary - s.TotalDeduction) AS NetSalary
+    FROM Department d
     JOIN Salary s
       ON d.SalaryId = s.SalaryId
+    ORDER BY d.DepartmentCode ASC
   `;
 
   db.query(sql, (err, result) => {
     if (err) {
       return res.status(500).json({
-        message: "Error retrieving payroll",
-        error: err
+        message: "Error retrieving payroll report",
+        error: err,
       });
     }
 
