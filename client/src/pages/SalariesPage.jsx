@@ -3,7 +3,12 @@ import { API_URL, money } from "../api";
 
 export default function SalariesPage() {
   const [salaries, setSalaries] = useState([]);
-  const [form, setForm] = useState({ GrossSalary: "", TotalDeduction: "", Month: "" });
+  const [form, setForm] = useState({
+    GrossSalary: "",
+    TotalDeduction: "",
+    Month: ""
+  });
+  const [editingId, setEditingId] = useState(null);
   const [message, setMessage] = useState("");
 
   function loadSalaries() {
@@ -17,11 +22,17 @@ export default function SalariesPage() {
     loadSalaries();
   }, []);
 
-  async function addSalary(e) {
+  async function saveSalary(e) {
     e.preventDefault();
 
-    const res = await fetch(`${API_URL}/salaries`, {
-      method: "POST",
+    const url = editingId
+      ? `${API_URL}/salaries/${editingId}`
+      : `${API_URL}/salaries`;
+
+    const method = editingId ? "PUT" : "POST";
+
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form)
     });
@@ -29,34 +40,94 @@ export default function SalariesPage() {
     const data = await res.json();
 
     if (!res.ok) {
-      setMessage(data.message || "Failed to add salary");
+      setMessage(data.message || "Failed to save salary");
       return;
     }
 
-    setForm({ GrossSalary: "", TotalDeduction: "", Month: "" });
-    setMessage("Salary added successfully");
+    setForm({
+      GrossSalary: "",
+      TotalDeduction: "",
+      Month: ""
+    });
+    setEditingId(null);
+    setMessage(editingId ? "Salary updated successfully" : "Salary added successfully");
     loadSalaries();
+  }
+
+  function startEdit(salary) {
+    setEditingId(salary.SalaryId);
+    setForm({
+      GrossSalary: salary.GrossSalary,
+      TotalDeduction: salary.TotalDeduction,
+      Month: salary.Month
+    });
+    setMessage("");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm({
+      GrossSalary: "",
+      TotalDeduction: "",
+      Month: ""
+    });
+    setMessage("");
   }
 
   async function deleteSalary(id) {
     if (!confirm("Delete this salary?")) return;
 
-    await fetch(`${API_URL}/salaries/${id}`, { method: "DELETE" });
+    await fetch(`${API_URL}/salaries/${id}`, {
+      method: "DELETE"
+    });
+
+    if (editingId === id) {
+      cancelEdit();
+    }
+
+    setMessage("Salary deleted successfully");
     loadSalaries();
   }
 
   return (
     <div>
       <h1>Salaries</h1>
-      <p className="muted">Add salary packages. Net salary is calculated in the backend.</p>
+      <p className="muted">
+        Add and update salary packages. Net salary is calculated in the backend.
+      </p>
 
       {message && <div className="message">{message}</div>}
 
-      <form onSubmit={addSalary} className="card form-grid">
-        <input placeholder="Gross Salary" value={form.GrossSalary} onChange={(e) => setForm({ ...form, GrossSalary: e.target.value })} />
-        <input placeholder="Total Deduction" value={form.TotalDeduction} onChange={(e) => setForm({ ...form, TotalDeduction: e.target.value })} />
-        <input placeholder="Month e.g January 2026" value={form.Month} onChange={(e) => setForm({ ...form, Month: e.target.value })} />
-        <button>Add Salary</button>
+      <form onSubmit={saveSalary} className="card form-grid">
+        <input
+          placeholder="Gross Salary"
+          value={form.GrossSalary}
+          onChange={(e) =>
+            setForm({ ...form, GrossSalary: e.target.value })
+          }
+        />
+
+        <input
+          placeholder="Total Deduction"
+          value={form.TotalDeduction}
+          onChange={(e) =>
+            setForm({ ...form, TotalDeduction: e.target.value })
+          }
+        />
+
+        <input
+          placeholder="Month e.g January 2026"
+          value={form.Month}
+          onChange={(e) => setForm({ ...form, Month: e.target.value })}
+        />
+
+        <button>{editingId ? "Update Salary" : "Add Salary"}</button>
+
+        {editingId && (
+          <button type="button" onClick={cancelEdit}>
+            Cancel
+          </button>
+        )}
       </form>
 
       <div className="card table-wrap">
@@ -71,6 +142,7 @@ export default function SalariesPage() {
               <th>Action</th>
             </tr>
           </thead>
+
           <tbody>
             {salaries.map((salary) => (
               <tr key={salary.SalaryId}>
@@ -79,7 +151,17 @@ export default function SalariesPage() {
                 <td>{money(salary.TotalDeduction)}</td>
                 <td>{money(salary.NetSalary)}</td>
                 <td>{salary.Month}</td>
-                <td><button className="danger" onClick={() => deleteSalary(salary.SalaryId)}>Delete</button></td>
+                <td>
+                  <button onClick={() => startEdit(salary)}>
+                    Edit
+                  </button>{" "}
+                  <button
+                    className="danger"
+                    onClick={() => deleteSalary(salary.SalaryId)}
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

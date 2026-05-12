@@ -4,8 +4,8 @@ import { API_URL } from "../api";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@gmail.com");
-  const [password, setPassword] = useState("12345");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
 
   async function login(e) {
@@ -32,8 +32,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <form onSubmit={login} className="card login-card">
-        <h1>EPMS Login</h1>
-        <p>Default: admin@gmail.com / 12345</p>
+        <h1>login</h1>
 
         {message && <div className="error">{message}</div>}
 

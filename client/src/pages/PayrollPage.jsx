@@ -19,7 +19,6 @@ export default function PayrollPage() {
   return (
     <div>
       <h1>Payroll</h1>
-      <p className="muted">Payroll is only a report from Department + Salary. Nothing is inserted here.</p>
 
       {message && <div className="message">{message}</div>}
 
