@@ -1,148 +1,107 @@
 import { useEffect, useState } from "react";
-import { money, request } from "../api";
-import Button from "../components/Button";
-import Field from "../components/Field";
-import FormBox from "../components/FormBox";
-import Input from "../components/Input";
-import PageHeader from "../components/PageHeader";
-import Select from "../components/Select";
-import Table from "../components/Table";
-
-const emptyDepartment = {
-  DepartmentCode: "",
-  DepartmentName: "",
-  SalaryId: ""
-};
+import { API_URL, money } from "../api";
 
 export default function DepartmentsPage() {
   const [departments, setDepartments] = useState([]);
   const [salaries, setSalaries] = useState([]);
-  const [departmentForm, setDepartmentForm] = useState(emptyDepartment);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ DepartmentCode: "", DepartmentName: "", SalaryId: "" });
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
 
-  async function loadData() {
-    setLoading(true);
-    setError("");
+  function loadDepartments() {
+    fetch(`${API_URL}/departments`)
+      .then((res) => res.json())
+      .then((data) => setDepartments(data))
+      .catch(() => setMessage("Failed to load departments"));
+  }
 
-    try {
-      const [departmentData, salaryData] = await Promise.all([
-        request("/departments"),
-        request("/salaries")
-      ]);
-
-      setDepartments(departmentData);
-      setSalaries(salaryData);
-    } catch (err) {
-      setError(err.message || "Could not load departments.");
-    } finally {
-      setLoading(false);
-    }
+  function loadSalaries() {
+    fetch(`${API_URL}/salaries`)
+      .then((res) => res.json())
+      .then((data) => setSalaries(data));
   }
 
   useEffect(() => {
-    loadData();
+    loadDepartments();
+    loadSalaries();
   }, []);
 
-  async function submitDepartment(event) {
-    event.preventDefault();
-    setSaving(true);
-    setError("");
-    setMessage("");
+  async function addDepartment(e) {
+    e.preventDefault();
 
-    try {
-      await request("/departments", {
-        method: "POST",
-        body: JSON.stringify({
-          ...departmentForm,
-          SalaryId: departmentForm.SalaryId || null
-        })
-      });
+    const res = await fetch(`${API_URL}/departments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form)
+    });
 
-      setDepartmentForm(emptyDepartment);
-      setMessage("Department added.");
-      await loadData();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage(data.message || "Failed to add department");
+      return;
     }
+
+    setForm({ DepartmentCode: "", DepartmentName: "", SalaryId: "" });
+    setMessage("Department added successfully");
+    loadDepartments();
   }
 
-  async function removeDepartment(departmentCode) {
-    const confirmed = window.confirm("Delete this department?");
-    if (!confirmed) return;
+  async function deleteDepartment(code) {
+    if (!confirm("Delete this department?")) return;
 
-    setError("");
-    setMessage("");
-
-    try {
-      await request(`/departments/${departmentCode}`, { method: "DELETE" });
-      setMessage("Department deleted.");
-      await loadData();
-    } catch (err) {
-      setError(err.message);
-    }
+    await fetch(`${API_URL}/departments/${code}`, { method: "DELETE" });
+    loadDepartments();
   }
 
   return (
-    <>
-      <PageHeader
-        title="Departments"
-        description="Create departments and link salary packages."
-        action={
-          <Button variant="secondary" onClick={loadData} disabled={loading}>
-            {loading ? "Loading..." : "Refresh"}
-          </Button>
-        }
-      />
+    <div>
+      <h1>Departments</h1>
+      <p className="muted">Create departments and connect each department to a salary.</p>
 
-      {message ? <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div> : null}
-      {error ? <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div> : null}
+      {message && <div className="message">{message}</div>}
 
-      <FormBox title="Add department">
-        <form onSubmit={submitDepartment} className="grid gap-3 sm:grid-cols-3">
-          <Field label="Department code">
-            <Input placeholder="IT01" value={departmentForm.DepartmentCode} onChange={(e) => setDepartmentForm({ ...departmentForm, DepartmentCode: e.target.value.toUpperCase() })} required />
-          </Field>
-          <Field label="Department name">
-            <Input placeholder="Information Technology" value={departmentForm.DepartmentName} onChange={(e) => setDepartmentForm({ ...departmentForm, DepartmentName: e.target.value })} required />
-          </Field>
-          <Field label="Salary package">
-            <Select value={departmentForm.SalaryId} onChange={(e) => setDepartmentForm({ ...departmentForm, SalaryId: e.target.value })}>
-              <option value="">No salary selected</option>
-              {salaries.map((salary) => (
-                <option key={salary.SalaryId} value={salary.SalaryId}>
-                  #{salary.SalaryId} - {salary.Month} - {money(salary.NetSalary)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <div className="sm:col-span-3">
-            <Button disabled={saving}>{saving ? "Saving..." : "Save department"}</Button>
-          </div>
-        </form>
-      </FormBox>
+      <form onSubmit={addDepartment} className="card form-grid">
+        <input placeholder="Department Code" value={form.DepartmentCode} onChange={(e) => setForm({ ...form, DepartmentCode: e.target.value })} />
+        <input placeholder="Department Name" value={form.DepartmentName} onChange={(e) => setForm({ ...form, DepartmentName: e.target.value })} />
+        <select value={form.SalaryId} onChange={(e) => setForm({ ...form, SalaryId: e.target.value })}>
+          <option value="">Select Salary</option>
+          {salaries.map((salary) => (
+            <option key={salary.SalaryId} value={salary.SalaryId}>
+              {salary.Month} - {money(salary.NetSalary)}
+            </option>
+          ))}
+        </select>
+        <button>Add Department</button>
+      </form>
 
-      <Table
-        emptyText={loading ? "Loading departments..." : "No departments yet."}
-        rows={departments.map((row) => ({ ...row, id: row.DepartmentCode }))}
-        columns={[
-          { key: "DepartmentCode", label: "Code" },
-          { key: "DepartmentName", label: "Name" },
-          { key: "SalaryId", label: "Salary ID" },
-          { key: "GrossSalary", label: "Gross", render: (row) => money(row.GrossSalary) },
-          { key: "TotalDeduction", label: "Deduction", render: (row) => money(row.TotalDeduction) },
-          { key: "NetSalary", label: "Net", render: (row) => money(row.NetSalary) },
-          {
-            key: "action",
-            label: "Action",
-            render: (row) => <Button variant="danger" onClick={() => removeDepartment(row.DepartmentCode)}>Delete</Button>
-          }
-        ]}
-      />
-    </>
+      <div className="card table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Name</th>
+              <th>Salary ID</th>
+              <th>Gross</th>
+              <th>Deduction</th>
+              <th>Net</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {departments.map((dept) => (
+              <tr key={dept.DepartmentCode}>
+                <td>{dept.DepartmentCode}</td>
+                <td>{dept.DepartmentName}</td>
+                <td>{dept.SalaryId || "-"}</td>
+                <td>{money(dept.GrossSalary)}</td>
+                <td>{money(dept.TotalDeduction)}</td>
+                <td>{money(dept.NetSalary)}</td>
+                <td><button className="danger" onClick={() => deleteDepartment(dept.DepartmentCode)}>Delete</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

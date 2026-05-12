@@ -1,23 +1,24 @@
-// src/components/ProtectedRoute.jsx
 import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import api from "../utils/api";
+import { API_URL } from "../api";
 
 export default function ProtectedRoute() {
   const [loading, setLoading] = useState(true);
-  const [authed, setAuthed] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
-    api
-      .get("/auth/me")
-      .then(() => setAuthed(true))
-      .catch(() => setAuthed(false))
+    fetch(`${API_URL}/auth/me`, { credentials: "include" })
+      .then((res) => {
+        if (res.ok) setLoggedIn(true);
+        else setLoggedIn(false);
+      })
+      .catch(() => setLoggedIn(false))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return <p className="p-6">Checking login...</p>;
-  }
+  if (loading) return <p className="container">Checking login...</p>;
 
-  return authed ? <Outlet /> : <Navigate to="/login" replace />;
+  if (!loggedIn) return <Navigate to="/login" replace />;
+
+  return <Outlet />;
 }

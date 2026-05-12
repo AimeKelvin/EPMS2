@@ -1,7 +1,7 @@
+import express from "express";
 import { getPayroll } from "../controllers/payroll.controller.js";
-import Router from "express";
 
-const router = Router();
+const router = express.Router();
 
 router.get("/", getPayroll);
 

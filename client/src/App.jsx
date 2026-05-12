@@ -1,8 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-
-import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
-
+import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import EmployeesPage from "./pages/EmployeesPage";
 import DepartmentsPage from "./pages/DepartmentsPage";
@@ -12,10 +10,8 @@ import PayrollPage from "./pages/PayrollPage";
 export default function App() {
   return (
     <Routes>
-      {/* Public */}
       <Route path="/login" element={<Login />} />
 
-      {/* Protected */}
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/" element={<EmployeesPage />} />
@@ -26,7 +22,6 @@ export default function App() {
         </Route>
       </Route>
 
-      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

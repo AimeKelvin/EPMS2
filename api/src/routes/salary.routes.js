@@ -1,7 +1,7 @@
+import express from "express";
 import { getSalaries, addSalary, deleteSalary } from "../controllers/salary.controller.js";
-import Router from "express";
 
-const router = Router();
+const router = express.Router();
 
 router.get("/", getSalaries);
 router.post("/", addSalary);

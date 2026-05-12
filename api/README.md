@@ -1,31 +1,22 @@
 # EPMS API
 
-Express + MySQL API for employee payroll management.
+Simple Express + MySQL API.
 
 ## Run
 
 ```bash
 npm install
+cp .env.example .env
 npm run dev
-```
-
-Server URL:
-
-```txt
-http://localhost:1000
-```
-
-## Database
-
-Import `schema.sql` into MySQL. It creates `EPMS2` and sample records.
-
-```bash
-mysql -u root -p < schema.sql
 ```
 
 ## Routes
 
 ```txt
+POST   /auth/login
+GET    /auth/me
+POST   /auth/logout
+
 GET    /employees
 POST   /employees
 DELETE /employees/:id
@@ -39,5 +30,4 @@ POST   /salaries
 DELETE /salaries/:id
 
 GET    /payroll
-GET    /payroll/summary
 ```

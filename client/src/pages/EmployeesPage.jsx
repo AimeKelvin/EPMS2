@@ -1,171 +1,129 @@
 import { useEffect, useState } from "react";
-import { dateOnly, request } from "../api";
-import Button from "../components/Button";
-import Field from "../components/Field";
-import FormBox from "../components/FormBox";
-import Input from "../components/Input";
-import PageHeader from "../components/PageHeader";
-import Select from "../components/Select";
-import Table from "../components/Table";
-
-const emptyEmployee = {
-  FirstName: "",
-  LastName: "",
-  DepartmentCode: "",
-  Position: "",
-  Address: "",
-  Telephone: "",
-  Gender: "",
-  HiredDate: ""
-};
+import { API_URL } from "../api";
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const [employeeForm, setEmployeeForm] = useState(emptyEmployee);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    FirstName: "",
+    LastName: "",
+    DepartmentCode: "",
+    Position: "",
+    Address: "",
+    Telephone: "",
+    Gender: "",
+    HiredDate: ""
+  });
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
 
-  async function loadData() {
-    setLoading(true);
-    setError("");
+  function loadEmployees() {
+    fetch(`${API_URL}/employees`)
+      .then((res) => res.json())
+      .then((data) => setEmployees(data))
+      .catch(() => setMessage("Failed to load employees"));
+  }
 
-    try {
-      const [employeeData, departmentData] = await Promise.all([
-        request("/employees"),
-        request("/departments")
-      ]);
-
-      setEmployees(employeeData);
-      setDepartments(departmentData);
-    } catch (err) {
-      setError(err.message || "Could not load employees.");
-    } finally {
-      setLoading(false);
-    }
+  function loadDepartments() {
+    fetch(`${API_URL}/departments`)
+      .then((res) => res.json())
+      .then((data) => setDepartments(data));
   }
 
   useEffect(() => {
-    loadData();
+    loadEmployees();
+    loadDepartments();
   }, []);
 
-  async function submitEmployee(event) {
-    event.preventDefault();
-    setSaving(true);
-    setError("");
-    setMessage("");
+  async function addEmployee(e) {
+    e.preventDefault();
 
-    try {
-      await request("/employees", {
-        method: "POST",
-        body: JSON.stringify(employeeForm)
-      });
+    const res = await fetch(`${API_URL}/employees`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form)
+    });
 
-      setEmployeeForm(emptyEmployee);
-      setMessage("Employee added.");
-      await loadData();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage(data.message || "Failed to add employee");
+      return;
     }
+
+    setForm({ FirstName: "", LastName: "", DepartmentCode: "", Position: "", Address: "", Telephone: "", Gender: "", HiredDate: "" });
+    setMessage("Employee added successfully");
+    loadEmployees();
   }
 
-  async function removeEmployee(employeeNumber) {
-    const confirmed = window.confirm("Delete this employee?");
-    if (!confirmed) return;
+  async function deleteEmployee(id) {
+    if (!confirm("Delete this employee?")) return;
 
-    setError("");
-    setMessage("");
-
-    try {
-      await request(`/employees/${employeeNumber}`, { method: "DELETE" });
-      setMessage("Employee deleted.");
-      await loadData();
-    } catch (err) {
-      setError(err.message);
-    }
+    await fetch(`${API_URL}/employees/${id}`, { method: "DELETE" });
+    loadEmployees();
   }
 
   return (
-    <>
-      <PageHeader
-        title="Employees"
-        description="Create and manage employee records."
-        action={
-          <Button variant="secondary" onClick={loadData} disabled={loading}>
-            {loading ? "Loading..." : "Refresh"}
-          </Button>
-        }
-      />
+    <div>
+      <h1>Employees</h1>
+      <p className="muted">Simple employee list with add and delete.</p>
 
-      {message ? <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div> : null}
-      {error ? <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div> : null}
+      {message && <div className="message">{message}</div>}
 
-      <FormBox title="Add employee">
-        <form onSubmit={submitEmployee} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="First name">
-            <Input value={employeeForm.FirstName} onChange={(e) => setEmployeeForm({ ...employeeForm, FirstName: e.target.value })} required />
-          </Field>
-          <Field label="Last name">
-            <Input value={employeeForm.LastName} onChange={(e) => setEmployeeForm({ ...employeeForm, LastName: e.target.value })} required />
-          </Field>
-          <Field label="Department">
-            <Select value={employeeForm.DepartmentCode} onChange={(e) => setEmployeeForm({ ...employeeForm, DepartmentCode: e.target.value })} required>
-              <option value="">Select department</option>
-              {departments.map((department) => (
-                <option key={department.DepartmentCode} value={department.DepartmentCode}>
-                  {department.DepartmentCode} - {department.DepartmentName}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Position">
-            <Input value={employeeForm.Position} onChange={(e) => setEmployeeForm({ ...employeeForm, Position: e.target.value })} required />
-          </Field>
-          <Field label="Telephone">
-            <Input value={employeeForm.Telephone} onChange={(e) => setEmployeeForm({ ...employeeForm, Telephone: e.target.value })} required />
-          </Field>
-          <Field label="Gender">
-            <Select value={employeeForm.Gender} onChange={(e) => setEmployeeForm({ ...employeeForm, Gender: e.target.value })}>
-              <option value="">Select</option>
-              <option>Male</option>
-              <option>Female</option>
-              <option>Other</option>
-            </Select>
-          </Field>
-          <Field label="Address">
-            <Input value={employeeForm.Address} onChange={(e) => setEmployeeForm({ ...employeeForm, Address: e.target.value })} required />
-          </Field>
-          <Field label="Hired date">
-            <Input type="date" value={employeeForm.HiredDate} onChange={(e) => setEmployeeForm({ ...employeeForm, HiredDate: e.target.value })} />
-          </Field>
-          <div className="sm:col-span-2 lg:col-span-4">
-            <Button disabled={saving}>{saving ? "Saving..." : "Save employee"}</Button>
-          </div>
-        </form>
-      </FormBox>
+      <form onSubmit={addEmployee} className="card form-grid">
+        <input placeholder="First Name" value={form.FirstName} onChange={(e) => setForm({ ...form, FirstName: e.target.value })} />
+        <input placeholder="Last Name" value={form.LastName} onChange={(e) => setForm({ ...form, LastName: e.target.value })} />
+        <select value={form.DepartmentCode} onChange={(e) => setForm({ ...form, DepartmentCode: e.target.value })}>
+          <option value="">Select Department</option>
+          {departments.map((dept) => (
+            <option key={dept.DepartmentCode} value={dept.DepartmentCode}>{dept.DepartmentName}</option>
+          ))}
+        </select>
+        <input placeholder="Position" value={form.Position} onChange={(e) => setForm({ ...form, Position: e.target.value })} />
+        <input placeholder="Address" value={form.Address} onChange={(e) => setForm({ ...form, Address: e.target.value })} />
+        <input placeholder="Telephone" value={form.Telephone} onChange={(e) => setForm({ ...form, Telephone: e.target.value })} />
+        <select value={form.Gender} onChange={(e) => setForm({ ...form, Gender: e.target.value })}>
+          <option value="">Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+        <input type="date" value={form.HiredDate} onChange={(e) => setForm({ ...form, HiredDate: e.target.value })} />
+        <button>Add Employee</button>
+      </form>
 
-      <Table
-        emptyText={loading ? "Loading employees..." : "No employees yet."}
-        rows={employees.map((row) => ({ ...row, id: row.EmployeeNumber }))}
-        columns={[
-          { key: "EmployeeNumber", label: "No" },
-          { key: "name", label: "Name", render: (row) => `${row.FirstName} ${row.LastName}` },
-          { key: "DepartmentName", label: "Department" },
-          { key: "Position", label: "Position" },
-          { key: "Telephone", label: "Telephone" },
-          { key: "Gender", label: "Gender" },
-          { key: "HiredDate", label: "Hired", render: (row) => dateOnly(row.HiredDate) },
-          {
-            key: "action",
-            label: "Action",
-            render: (row) => <Button variant="danger" onClick={() => removeEmployee(row.EmployeeNumber)}>Delete</Button>
-          }
-        ]}
-      />
-    </>
+      <div className="card table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Department</th>
+              <th>Position</th>
+              <th>Address</th>
+              <th>Telephone</th>
+              <th>Gender</th>
+              <th>Hired Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {employees.map((employee) => (
+              <tr key={employee.EmployeeNumber}>
+                <td>{employee.EmployeeNumber}</td>
+                <td>{employee.FirstName}</td>
+                <td>{employee.LastName}</td>
+                <td>{employee.DepartmentName}</td>
+                <td>{employee.Position}</td>
+                <td>{employee.Address}</td>
+                <td>{employee.Telephone}</td>
+                <td>{employee.Gender || "-"}</td>
+                <td>{employee.HiredDate ? String(employee.HiredDate).slice(0, 10) : "-"}</td>
+                <td><button className="danger" onClick={() => deleteEmployee(employee.EmployeeNumber)}>Delete</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

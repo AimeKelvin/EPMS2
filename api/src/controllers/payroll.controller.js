@@ -1,29 +1,16 @@
 import db from "../config/db.js";
 
-const getPayroll = (req, res) => {
+export function getPayroll(req, res) {
   const sql = `
-    SELECT
-      d.DepartmentCode,
-      d.DepartmentName,
-      s.GrossSalary,
-      s.TotalDeduction,
-      (s.GrossSalary - s.TotalDeduction) AS NetSalary
-    FROM Department d
-    JOIN Salary s
-      ON d.SalaryId = s.SalaryId
-    ORDER BY d.DepartmentCode ASC
+    SELECT Department.DepartmentCode, Department.DepartmentName,
+           Salary.GrossSalary, Salary.TotalDeduction
+    FROM Department
+    LEFT JOIN Salary ON Department.SalaryId = Salary.SalaryId
+    ORDER BY Department.DepartmentCode ASC
   `;
 
-  db.query(sql, (err, result) => {
-    if (err) {
-      return res.status(500).json({
-        message: "Error retrieving payroll report",
-        error: err,
-      });
-    }
-
-    res.status(200).json(result);
+  db.query(sql, (err, rows) => {
+    if (err) return res.status(500).json({ message: "Failed to get payroll", error: err });
+    res.json(rows);
   });
-};
-
-export { getPayroll };
+}

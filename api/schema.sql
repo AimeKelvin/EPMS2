@@ -4,6 +4,14 @@ USE EPMS2;
 DROP TABLE IF EXISTS Employee;
 DROP TABLE IF EXISTS Department;
 DROP TABLE IF EXISTS Salary;
+DROP TABLE IF EXISTS users;
+
+CREATE TABLE users (
+    UserId INT AUTO_INCREMENT PRIMARY KEY,
+    FullName VARCHAR(100) NOT NULL,
+    Email VARCHAR(100) NOT NULL UNIQUE,
+    Password VARCHAR(100) NOT NULL
+);
 
 CREATE TABLE Salary (
     SalaryId INT AUTO_INCREMENT PRIMARY KEY,
@@ -36,6 +44,9 @@ CREATE TABLE Employee (
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
+
+INSERT INTO users (FullName, Email, Password) VALUES
+('Admin User', 'admin@gmail.com', '12345');
 
 INSERT INTO Salary (GrossSalary, TotalDeduction, NetSalary, Month) VALUES
 (500000, 50000, 450000, 'January 2026'),

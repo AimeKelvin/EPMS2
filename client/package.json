@@ -1,5 +1,5 @@
 {
-  "name": "client",
+  "name": "epms-client-simple",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -10,11 +10,11 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "axios": "^1.16.0",
+    "vite": "latest",
     "react": "latest",
     "react-dom": "latest",
     "react-router-dom": "latest",
-    "tailwindcss": "latest",
-    "vite": "latest"
-  }
+    "tailwindcss": "latest"
+  },
+  "devDependencies": {}
 }

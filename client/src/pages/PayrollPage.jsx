@@ -1,56 +1,50 @@
 import { useEffect, useState } from "react";
-import { money, request } from "../api";
-import Button from "../components/Button";
-import PageHeader from "../components/PageHeader";
-import Table from "../components/Table";
+import { API_URL, money } from "../api";
 
 export default function PayrollPage() {
   const [payroll, setPayroll] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
-  async function loadData() {
-    setLoading(true);
-    setError("");
-
-    try {
-      const payrollData = await request("/payroll");
-      setPayroll(payrollData);
-    } catch (err) {
-      setError(err.message || "Could not load payroll.");
-    } finally {
-      setLoading(false);
-    }
+  function loadPayroll() {
+    fetch(`${API_URL}/payroll`)
+      .then((res) => res.json())
+      .then((data) => setPayroll(data))
+      .catch(() => setMessage("Failed to load payroll"));
   }
 
   useEffect(() => {
-    loadData();
+    loadPayroll();
   }, []);
 
   return (
-    <>
-      <PageHeader
-        title="Payroll"
-        description="Simple payroll view by department."
-        action={
-          <Button variant="secondary" onClick={loadData} disabled={loading}>
-            {loading ? "Loading..." : "Refresh"}
-          </Button>
-        }
-      />
+    <div>
+      <h1>Payroll</h1>
+      <p className="muted">Payroll is only a report from Department + Salary. Nothing is inserted here.</p>
 
-      {error ? <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div> : null}
+      {message && <div className="message">{message}</div>}
 
-      <Table
-        emptyText={loading ? "Loading payroll..." : "No payroll records yet."}
-        rows={payroll.map((row, index) => ({ ...row, id: `${row.DepartmentCode}-${index}` }))}
-        columns={[
-          { key: "DepartmentCode", label: "Dep Code" },
-          { key: "DepartmentName", label: "Department Name" },
-          { key: "GrossSalary", label: "Gross", render: (row) => money(row.GrossSalary) },
-          { key: "TotalDeduction", label: "Deduction", render: (row) => money(row.TotalDeduction) }
-        ]}
-      />
-    </>
+      <div className="card table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Department Code</th>
+              <th>Department Name</th>
+              <th>Gross Salary</th>
+              <th>Total Deduction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {payroll.map((item) => (
+              <tr key={item.DepartmentCode}>
+                <td>{item.DepartmentCode}</td>
+                <td>{item.DepartmentName}</td>
+                <td>{money(item.GrossSalary)}</td>
+                <td>{money(item.TotalDeduction)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

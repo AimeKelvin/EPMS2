@@ -1,140 +1,90 @@
-import { useEffect, useMemo, useState } from "react";
-import { money, request } from "../api";
-import Button from "../components/Button";
-import Field from "../components/Field";
-import FormBox from "../components/FormBox";
-import Input from "../components/Input";
-import PageHeader from "../components/PageHeader";
-import Table from "../components/Table";
-
-const emptySalary = {
-  GrossSalary: "",
-  TotalDeduction: "",
-  Month: ""
-};
+import { useEffect, useState } from "react";
+import { API_URL, money } from "../api";
 
 export default function SalariesPage() {
   const [salaries, setSalaries] = useState([]);
-  const [salaryForm, setSalaryForm] = useState(emptySalary);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ GrossSalary: "", TotalDeduction: "", Month: "" });
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
 
-  const netPreview = useMemo(() => {
-    const gross = Number(salaryForm.GrossSalary || 0);
-    const deductions = Number(salaryForm.TotalDeduction || 0);
-    return gross - deductions;
-  }, [salaryForm]);
-
-  async function loadData() {
-    setLoading(true);
-    setError("");
-
-    try {
-      const salaryData = await request("/salaries");
-      setSalaries(salaryData);
-    } catch (err) {
-      setError(err.message || "Could not load salaries.");
-    } finally {
-      setLoading(false);
-    }
+  function loadSalaries() {
+    fetch(`${API_URL}/salaries`)
+      .then((res) => res.json())
+      .then((data) => setSalaries(data))
+      .catch(() => setMessage("Failed to load salaries"));
   }
 
   useEffect(() => {
-    loadData();
+    loadSalaries();
   }, []);
 
-  async function submitSalary(event) {
-    event.preventDefault();
-    setSaving(true);
-    setError("");
-    setMessage("");
+  async function addSalary(e) {
+    e.preventDefault();
 
-    try {
-      await request("/salaries", {
-        method: "POST",
-        body: JSON.stringify(salaryForm)
-      });
+    const res = await fetch(`${API_URL}/salaries`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form)
+    });
 
-      setSalaryForm(emptySalary);
-      setMessage("Salary added.");
-      await loadData();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage(data.message || "Failed to add salary");
+      return;
     }
+
+    setForm({ GrossSalary: "", TotalDeduction: "", Month: "" });
+    setMessage("Salary added successfully");
+    loadSalaries();
   }
 
-  async function removeSalary(salaryId) {
-    const confirmed = window.confirm("Delete this salary?");
-    if (!confirmed) return;
+  async function deleteSalary(id) {
+    if (!confirm("Delete this salary?")) return;
 
-    setError("");
-    setMessage("");
-
-    try {
-      await request(`/salaries/${salaryId}`, { method: "DELETE" });
-      setMessage("Salary deleted.");
-      await loadData();
-    } catch (err) {
-      setError(err.message);
-    }
+    await fetch(`${API_URL}/salaries/${id}`, { method: "DELETE" });
+    loadSalaries();
   }
 
   return (
-    <>
-      <PageHeader
-        title="Salaries"
-        description="Create salary packages for departments."
-        action={
-          <Button variant="secondary" onClick={loadData} disabled={loading}>
-            {loading ? "Loading..." : "Refresh"}
-          </Button>
-        }
-      />
+    <div>
+      <h1>Salaries</h1>
+      <p className="muted">Add salary packages. Net salary is calculated in the backend.</p>
 
-      {message ? <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</div> : null}
-      {error ? <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div> : null}
+      {message && <div className="message">{message}</div>}
 
-      <FormBox title="Add salary">
-        <form onSubmit={submitSalary} className="grid gap-3 sm:grid-cols-4">
-          <Field label="Gross salary">
-            <Input type="number" min="0" value={salaryForm.GrossSalary} onChange={(e) => setSalaryForm({ ...salaryForm, GrossSalary: e.target.value })} required />
-          </Field>
-          <Field label="Total deduction">
-            <Input type="number" min="0" value={salaryForm.TotalDeduction} onChange={(e) => setSalaryForm({ ...salaryForm, TotalDeduction: e.target.value })} required />
-          </Field>
-          <Field label="Month">
-            <Input placeholder="January 2026" value={salaryForm.Month} onChange={(e) => setSalaryForm({ ...salaryForm, Month: e.target.value })} required />
-          </Field>
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-            <span className="block text-xs text-slate-500">Net preview</span>
-            <strong>{money(netPreview)}</strong>
-          </div>
-          <div className="sm:col-span-4">
-            <Button disabled={saving}>{saving ? "Saving..." : "Save salary"}</Button>
-          </div>
-        </form>
-      </FormBox>
+      <form onSubmit={addSalary} className="card form-grid">
+        <input placeholder="Gross Salary" value={form.GrossSalary} onChange={(e) => setForm({ ...form, GrossSalary: e.target.value })} />
+        <input placeholder="Total Deduction" value={form.TotalDeduction} onChange={(e) => setForm({ ...form, TotalDeduction: e.target.value })} />
+        <input placeholder="Month e.g January 2026" value={form.Month} onChange={(e) => setForm({ ...form, Month: e.target.value })} />
+        <button>Add Salary</button>
+      </form>
 
-      <Table
-        emptyText={loading ? "Loading salaries..." : "No salaries yet."}
-        rows={salaries.map((row) => ({ ...row, id: row.SalaryId }))}
-        columns={[
-          { key: "SalaryId", label: "ID" },
-          { key: "Month", label: "Month" },
-          { key: "GrossSalary", label: "Gross", render: (row) => money(row.GrossSalary) },
-          { key: "TotalDeduction", label: "Deduction", render: (row) => money(row.TotalDeduction) },
-          { key: "NetSalary", label: "Net", render: (row) => money(row.NetSalary) },
-          {
-            key: "action",
-            label: "Action",
-            render: (row) => <Button variant="danger" onClick={() => removeSalary(row.SalaryId)}>Delete</Button>
-          }
-        ]}
-      />
-    </>
+      <div className="card table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Gross</th>
+              <th>Deduction</th>
+              <th>Net</th>
+              <th>Month</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {salaries.map((salary) => (
+              <tr key={salary.SalaryId}>
+                <td>{salary.SalaryId}</td>
+                <td>{money(salary.GrossSalary)}</td>
+                <td>{money(salary.TotalDeduction)}</td>
+                <td>{money(salary.NetSalary)}</td>
+                <td>{salary.Month}</td>
+                <td><button className="danger" onClick={() => deleteSalary(salary.SalaryId)}>Delete</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
